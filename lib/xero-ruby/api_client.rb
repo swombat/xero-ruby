@@ -99,7 +99,7 @@ module XeroRuby
       @config.base_url = @config.payroll_nz_url
       XeroRuby::PayrollNzApi.new(self)
     end
-    
+
     def payroll_uk_api
       @config.base_url = @config.payroll_uk_url
       XeroRuby::PayrollUkApi.new(self)
@@ -142,7 +142,7 @@ module XeroRuby
 
       set_access_token(token_set[:access_token]) if token_set[:access_token]
       set_id_token(token_set[:id_token]) if token_set[:id_token]
-      
+
       return true
     end
 
@@ -173,6 +173,8 @@ module XeroRuby
 
       validate_tokens(token_set)
       validate_state(params)
+
+      token_set.attributize!
       return token_set
     end
 
@@ -245,6 +247,7 @@ module XeroRuby
       else
         body = {}
       end
+      body.attributize!
       return body
     end
 
@@ -253,7 +256,9 @@ module XeroRuby
       @config.base_url = 'https://api.xero.com'
       opts = { :header_params => {'Content-Type': 'application/json'}, :auth_names => ['OAuth2'] }
       response = call_api(:GET, "/connections/", nil, opts)
-      response[0]
+      connections = response[0]
+      connections.attributize!
+      return connections
     end
 
     def last_connection
@@ -391,6 +396,15 @@ module XeroRuby
       request.body = req_body
       request.url url
       request.params = query_params
+
+      if @config.debugging
+        @config.logger.debug "HTTP request inspect ~BEGIN~\n#{request.inspect}\n~END~\n"
+        # @config.logger.debug "HTTP request url ~BEGIN~\n#{request.url}\n~END~\n"
+        @config.logger.debug "HTTP request headers ~BEGIN~\n#{request.headers}\n~END~\n"
+        @config.logger.debug "HTTP request params ~BEGIN~\n#{request.params}\n~END~\n"
+        @config.logger.debug "HTTP request body ~BEGIN~\n#{request.body}\n~END~\n"
+      end
+
       request
     end
 
@@ -466,9 +480,12 @@ module XeroRuby
         else
           raise e
         end
-      end 
+      end
 
-      convert_to_type(data, return_type, api_client)
+      # convert_to_type(data, return_type, api_client)
+      data.deep_compact!
+      data.attributize!
+      data
     end
 
     # Convert data to the given return type.
